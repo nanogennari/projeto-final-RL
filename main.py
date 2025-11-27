@@ -4,6 +4,7 @@ Authors: Michael (https://github.com/mikepratt1), Nickua (https://github.com/nic
 """
 
 import os
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -262,13 +263,60 @@ if __name__ == "__main__":
         for agent in pop:
             agent.steps.append(agent.steps[-1])
 
-    # Save the trained algorithm
-    path = "./models/MATD3"
-    filename = "MATD3_trained_agent.pt"
+    # Create timestamped directory for this training run
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = f"./models/MATD3/{timestamp}"
     os.makedirs(path, exist_ok=True)
+
+    # Save the trained algorithm
+    filename = "MATD3_trained_agent.pt"
     save_path = os.path.join(path, filename)
     elite.save_checkpoint(save_path)
-    
+    print(f"Modelo salvo em: {save_path}")
+
+    # Save hyperparameters to txt file
+    params_path = os.path.join(path, "hyperparameters.txt")
+    with open(params_path, 'w') as f:
+        f.write("=" * 60 + "\n")
+        f.write(f"Training Run: {timestamp}\n")
+        f.write("=" * 60 + "\n\n")
+
+        f.write("INITIAL HYPERPARAMETERS:\n")
+        f.write("-" * 60 + "\n")
+        for key, value in INIT_HP.items():
+            if key != "AGENT_IDS":  # Skip agent IDs (they're env-specific)
+                f.write(f"{key:20s} = {value}\n")
+
+        f.write("\n")
+        f.write("NETWORK CONFIGURATION:\n")
+        f.write("-" * 60 + "\n")
+        for key, value in NET_CONFIG.items():
+            f.write(f"{key:20s} = {value}\n")
+
+        f.write("\n")
+        f.write("TRAINING SETTINGS:\n")
+        f.write("-" * 60 + "\n")
+        f.write(f"{'max_steps':20s} = {max_steps}\n")
+        f.write(f"{'num_envs':20s} = {num_envs}\n")
+        f.write(f"{'evo_steps':20s} = {evo_steps}\n")
+        f.write(f"{'device':20s} = {device}\n")
+
+        f.write("\n")
+        f.write("FINAL RESULTS:\n")
+        f.write("-" * 60 + "\n")
+        f.write(f"{'Final Mean Score':20s} = {training_scores_history[-1]:.2f}\n")
+        f.write(f"{'Best Score':20s} = {max(training_scores_history):.2f}\n")
+        f.write(f"{'Worst Score':20s} = {min(training_scores_history):.2f}\n")
+
+    print(f"Hiperparâmetros salvos em: {params_path}")
+
+    # Create symlink to latest model for easy access
+    latest_link = "./models/MATD3/latest"
+    if os.path.islink(latest_link):
+        os.unlink(latest_link)
+    os.symlink(timestamp, latest_link, target_is_directory=True)
+    print(f"Link simbólico 'latest' criado apontando para: {timestamp}")
+
     # Plotar e salvar a evolução das pontuações
     plt.figure(figsize=(12, 6))
     plt.plot(training_scores_history, linewidth=2)
@@ -277,17 +325,17 @@ if __name__ == "__main__":
     plt.ylabel('Pontuação Média da População', fontsize=12)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    
+
     # Salvar o gráfico
     plot_path = os.path.join(path, "training_scores_evolution.png")
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     print(f"Gráfico de evolução das pontuações salvo em: {plot_path}")
-    
+
     # Salvar dados das pontuações em arquivo numpy
     scores_data_path = os.path.join(path, "training_scores_history.npy")
     np.save(scores_data_path, np.array(training_scores_history))
     print(f"Dados das pontuações salvos em: {scores_data_path}")
-    
+
     plt.show()
 
     pbar.close()

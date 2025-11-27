@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  training:
+    image: projeto-final-rl:latest
+    command: python main.py
+    volumes:
+      - ./main.py:/app/main.py
+      - ./replay.py:/app/replay.py
+      - ./models:/app/models
+      - ./videos:/app/videos
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  replay:
+    image: projeto-final-rl:latest
+    command: python replay.py
+    volumes:
+      - ./main.py:/app/main.py
+      - ./replay.py:/app/replay.py
+      - ./models:/app/models
+      - ./videos:/app/videos
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

@@ -39,9 +39,10 @@ if __name__ == "__main__":
     n_agents = env.num_agents
     agent_ids = env.agents
 
-    # Load the saved agent
-    path = "./models/MATD3/MATD3_trained_agent.pt"
+    # Load the saved agent (from latest training run)
+    path = "./models/MATD3/latest/MATD3_trained_agent.pt"
     matd3 = MATD3.load(path, device)
+    print(f"Loaded model from: {path}")
 
     # Define test loop parameters
     episodes = 10  # Number of episodes to test agent on

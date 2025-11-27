@@ -17,32 +17,73 @@ Um descrição detalhada deste ambiente pode ser encontrada [neste artigo](https
 - Treinamento usando algoritmos de aprendizado por reforço multi-agente
 - Suporte para GPU via PyTorch CUDA         
 - Implementação modular e extensível 
-## Requisitos                               
-- Python 3.x                                
-- PyTorch                                   
-- CUDA (opcional, para aceleração GPU) 
-- **uv** (configuração do ambiente e instalação das dependências)
+## Requisitos
+- Docker e Docker Compose (recomendado)
+- GPU NVIDIA com CUDA (para aceleração GPU)
+- **OU** Python 3.12+ com **uv** (para execução local)
+
 ## Como Usar
 
-Após copiar este diretório localmente, inicialize o ambiente virtual definido em pyproject.toml com o comando `uv`:
+### Opção 1: Docker Compose (Recomendado)
+
+A forma mais fácil de executar o projeto é usando Docker Compose:
+
+**1. Build da imagem (apenas na primeira vez ou após mudar dependências):**
+```bash
+docker build -t projeto-final-rl:latest .
+```
+
+**2. Executar o treinamento:**
+```bash
+docker compose run --rm training
+```
+
+**3. Visualizar o modelo treinado:**
+```bash
+docker compose run --rm replay
+```
+
+### Opção 2: Execução Local com uv
+
+Após copiar este diretório localmente, inicialize o ambiente virtual definido em pyproject.toml:
 
 ```bash
 uv sync
 ```
 
-Execute o script principal:                 
-```bash                                     
+Execute o script principal:
+```bash
 python main.py
 ```
 
-O sistema detectará automaticamente se CUDA está disponível e utilizará GPU quando possível. 
-Ao final do treinamento, é salva a melhor configuração dos agentes treinados, e uma figura com a evolução do score médio dos agentes.
-
-Para gerar a visualização do modelo treinado, execute o script de replay:
+Para gerar a visualização do modelo treinado:
 
 ```bash
 python replay.py
 ```
+
+## Organização dos Modelos
+
+O sistema detectará automaticamente se CUDA está disponível e utilizará GPU quando possível.
+
+**Cada execução de treinamento salva automaticamente:**
+
+```
+models/MATD3/
+├── 20251127_143052/              # Timestamped run
+│   ├── MATD3_trained_agent.pt    # Modelo treinado
+│   ├── hyperparameters.txt       # Todos os hiperparâmetros usados
+│   ├── training_scores_evolution.png  # Gráfico de evolução
+│   └── training_scores_history.npy    # Dados brutos
+├── 20251127_190234/              # Outra execução
+│   └── ...
+└── latest -> 20251127_190234/    # Symlink para o modelo mais recente
+```
+
+- Cada treinamento cria um diretório com timestamp único
+- Os hiperparâmetros são salvos em `hyperparameters.txt` para comparação
+- O link `latest/` sempre aponta para o modelo mais recente
+- `replay.py` carrega automaticamente o modelo mais recente
 
 
 
