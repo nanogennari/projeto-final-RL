@@ -1,0 +1,54 @@
+# Virtual environments (local venv should not go into container)
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Training results (these are mounted as volumes)
+models/
+videos/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (already in container via COPY)
+*.md
+
+# Docker files (don't need these inside the container)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Test coverage
+.coverage
+htmlcov/
