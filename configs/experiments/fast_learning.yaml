@@ -1,0 +1,64 @@
+# Fast Learning Configuration
+# Frequent learning updates with smaller batches for quick adaptation
+
+name: "fast_learning_matd3"
+description: "MATD3 with very frequent learning for rapid adaptation"
+seed: 42
+
+training:
+  max_steps: 2000000
+  num_envs: 8
+  evo_steps: 10000
+  checkpoint_interval: 100000
+  learning_delay: 0
+  eval_steps: null
+  eval_loop: 1
+
+hyperparameters:
+  population_size: 4
+  algo: "MATD3"
+  batch_size: 64               # Smaller batches
+  lr_actor: 0.0002
+  lr_critic: 0.001
+  gamma: 0.95
+  memory_size: 100000
+  learn_step: 20               # Very frequent learning (5x more than baseline)
+  tau: 0.02                    # Faster soft updates
+  policy_freq: 1               # Update policy every step
+
+  o_u_noise: true
+  expl_noise: 0.1
+  mean_noise: 0.0
+  theta: 0.15
+  dt: 0.01
+
+network:
+  latent_dim: 64
+  encoder_hidden_size: [64]
+  head_hidden_size: [64]
+
+hpo_config:
+  lr_actor:
+    min: 0.0001
+    max: 0.01
+  lr_critic:
+    min: 0.0001
+    max: 0.01
+  batch_size:
+    min: 16
+    max: 256
+    dtype: int
+  learn_step:
+    min: 5
+    max: 100
+    dtype: int
+    grow_factor: 1.5
+    shrink_factor: 0.75
+
+mutation:
+  no_mutation: 0.2
+  architecture: 0.2
+  new_layer: 0.2
+  parameter: 0.2
+  rl_hp: 0.2
+  mutation_sd: 0.1

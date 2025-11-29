@@ -1,0 +1,67 @@
+# Baseline MATD3 Configuration
+# This matches the current hardcoded configuration in main.py
+
+name: "baseline_matd3"
+description: "Baseline MATD3 configuration matching original implementation"
+seed: 42
+
+training:
+  max_steps: 2000000          # Total training steps
+  num_envs: 8                 # Number of parallel environments
+  evo_steps: 10000            # Evolution frequency (every N steps)
+  checkpoint_interval: 100000  # Checkpoint frequency
+  learning_delay: 0           # Steps before starting learning
+  eval_steps: null            # Evaluation steps per episode (null = until done)
+  eval_loop: 1                # Number of evaluation episodes
+
+hyperparameters:
+  population_size: 4
+  algo: "MATD3"
+  batch_size: 128
+  lr_actor: 0.0001           # Actor learning rate
+  lr_critic: 0.001           # Critic learning rate
+  gamma: 0.95                # Discount factor
+  memory_size: 100000        # Replay buffer size
+  learn_step: 100            # Learning frequency
+  tau: 0.01                  # Soft update parameter
+  policy_freq: 2             # Policy update frequency
+
+  # Noise parameters
+  o_u_noise: true            # Use Ornstein-Uhlenbeck noise
+  expl_noise: 0.1            # Exploration noise scale
+  mean_noise: 0.0            # Mean noise
+  theta: 0.15                # OU noise mean reversion rate
+  dt: 0.01                   # OU noise timestep
+
+network:
+  latent_dim: 64
+  encoder_hidden_size: [64]  # Actor hidden layers
+  head_hidden_size: [64]     # Critic hidden layers
+
+hpo_config:
+  # Hyperparameter optimization bounds for evolutionary search
+  lr_actor:
+    min: 0.0001
+    max: 0.01
+  lr_critic:
+    min: 0.0001
+    max: 0.01
+  batch_size:
+    min: 8
+    max: 512
+    dtype: int
+  learn_step:
+    min: 20
+    max: 200
+    dtype: int
+    grow_factor: 1.5
+    shrink_factor: 0.75
+
+mutation:
+  # Evolutionary mutation probabilities
+  no_mutation: 0.2
+  architecture: 0.2
+  new_layer: 0.2
+  parameter: 0.2
+  rl_hp: 0.2
+  mutation_sd: 0.1

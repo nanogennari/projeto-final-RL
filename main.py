@@ -1,10 +1,21 @@
-"""This tutorial shows how to train an MATD3 agent on the simple speaker listener multi-particle environment.
+"""
+MATD3 Multi-Agent Training with Experiment Management
+
+Features:
+- Live progress monitoring
+- YAML-based configuration
+- Results tracking and comparison
 
 Authors: Michael (https://github.com/mikepratt1), Nickua (https://github.com/nicku-a)
+Modified for experiment management
 """
 
+import argparse
 import os
+import random
+import time
 from datetime import datetime
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,41 +33,75 @@ from agilerl.utils.utils import (
     make_multi_agent_vect_envs,
 )
 
+# Import experiment management modules
+from src.experiment_manager import ExperimentManager
+from src.progress_tracker import ProgressTracker
+from src.results_tracker import ResultsTracker
+
+def set_seeds(seed: int):
+    """Set random seeds for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="MATD3 Multi-Agent Training")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/experiments/baseline.yaml",
+        help="Path to experiment configuration file",
+    )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Experiment ID to resume (defaults to auto-detect from config)",
+    )
+    args = parser.parse_args()
+
+    # Load experiment configuration
+    print("=" * 60)
+    print("MATD3 Multi-Agent Training with Experiment Management")
+    print("=" * 60)
+    print()
+    print(f"Loading config: {args.config}")
+
+    exp_manager = ExperimentManager(args.config)
+    config = exp_manager.load_config()
+
+    print(f"Experiment: {config.name}")
+    print(f"Description: {config.description}")
+    print()
+
+    # Set random seeds for reproducibility
+    set_seeds(config.seed)
+    print(f"✓ Random seed set: {config.seed}")
+
+    # Setup device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("===== AgileRL Online Multi-Agent Demo =====")
+    print(f"✓ Device: {device}")
+    print()
 
-    # Define the network configuration
-    NET_CONFIG = {
-        "latent_dim": 64,
-        "encoder_config": {
-            "hidden_size": [64],  # Actor hidden size
-        },
-        "head_config": {
-            "hidden_size": [64],  # Critic hidden size
-        },
-    }
+    # Load configurations from YAML
+    INIT_HP = exp_manager.get_init_hp()
+    NET_CONFIG = exp_manager.get_net_config()
+    hp_config = exp_manager.get_hpo_config()
+    mutation_config = exp_manager.get_mutation_config()
+    training_config = exp_manager.get_training_config()
 
-    # Define the initial hyperparameters
-    INIT_HP = {
-        "POPULATION_SIZE": 4,
-        "ALGO": "MATD3",  # Algorithm
-        "BATCH_SIZE": 128,  # Batch size
-        "O_U_NOISE": True,  # Ornstein Uhlenbeck action noise
-        "EXPL_NOISE": 0.1,  # Action noise scale
-        "MEAN_NOISE": 0.0,  # Mean action noise
-        "THETA": 0.15,  # Rate of mean reversion in OU noise
-        "DT": 0.01,  # Timestep for OU noise
-        "LR_ACTOR": 0.0001,  # Actor learning rate
-        "LR_CRITIC": 0.001,  # Critic learning rate
-        "GAMMA": 0.95,  # Discount factor
-        "MEMORY_SIZE": 100000,  # Max memory buffer size
-        "LEARN_STEP": 100,  # Learning frequency
-        "TAU": 0.01,  # For soft update of target parameters
-        "POLICY_FREQ": 2,  # Policy frequnecy
-    }
-
-    num_envs = 8
+    # Training parameters
+    max_steps = training_config["max_steps"]
+    num_envs = training_config["num_envs"]
+    evo_steps = training_config["evo_steps"]
+    learning_delay = training_config["learning_delay"]
+    eval_steps = training_config["eval_steps"]
+    eval_loop = training_config["eval_loop"]
 
     def make_env():
         return simple_speaker_listener_v4.parallel_env(continuous_actions=True)
@@ -70,15 +115,25 @@ if __name__ == "__main__":
     # Append number of agents and agent IDs to the initial hyperparameter dictionary
     INIT_HP["AGENT_IDS"] = env.agents
 
-    # Mutation config for RL hyperparameters
-    hp_config = HyperparameterConfig(
-        lr_actor=RLParameter(min=1e-4, max=1e-2),
-        lr_critic=RLParameter(min=1e-4, max=1e-2),
-        batch_size=RLParameter(min=8, max=512, dtype=int),
-        learn_step=RLParameter(
-            min=20, max=200, dtype=int, grow_factor=1.5, shrink_factor=0.75
-        ),
+    # Create experiment ID for this run
+    exp_id = f"exp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # Initialize experiment management
+    print("-" * 60)
+    print("Initializing experiment management...")
+    print("-" * 60)
+
+    progress_tracker = ProgressTracker(
+        experiment_id=exp_id,
+        progress_dir="progress",
+        max_steps=max_steps,
     )
+
+    results_tracker = ResultsTracker(results_dir="results")
+
+    print(f"✓ Experiment ID: {exp_id}")
+    print(f"✓ Progress tracking enabled")
+    print()
 
     # Create a population ready for evolutionary hyper-parameter optimisation
     pop: list[MATD3] = create_population(
@@ -93,14 +148,18 @@ if __name__ == "__main__":
         device=device,
     )
 
-    # Configure the multi-agent replay buffer
-    field_names = ["obs", "action", "reward", "next_obs", "done"]
-    memory = MultiAgentReplayBuffer(
-        INIT_HP["MEMORY_SIZE"],
-        field_names=field_names,
-        agent_ids=INIT_HP["AGENT_IDS"],
-        device=device,
-    )
+    # Configure the multi-agent replay buffer (only for off-policy algorithms)
+    # IPPO is on-policy and doesn't use replay buffer
+    if INIT_HP["ALGO"] != "IPPO":
+        field_names = ["obs", "action", "reward", "next_obs", "done"]
+        memory = MultiAgentReplayBuffer(
+            INIT_HP["MEMORY_SIZE"],
+            field_names=field_names,
+            agent_ids=INIT_HP["AGENT_IDS"],
+            device=device,
+        )
+    else:
+        memory = None  # IPPO doesn't use replay buffer
 
     # Instantiate a tournament selection object (used for HPO)
     tournament = TournamentSelection(
@@ -110,33 +169,45 @@ if __name__ == "__main__":
         eval_loop=1,  # Evaluate using last N fitness scores
     )
 
-    # Instantiate a mutations object (used for HPO)
+    # Instantiate a mutations object (used for HPO) - from config
     mutations = Mutations(
-        no_mutation=0.2,  # Probability of no mutation
-        architecture=0.2,  # Probability of architecture mutation
-        new_layer_prob=0.2,  # Probability of new layer mutation
-        parameters=0.2,  # Probability of parameter mutation
-        activation=0,  # Probability of activation function mutation
-        rl_hp=0.2,  # Probability of RL hyperparameter mutation
-        mutation_sd=0.1,  # Mutation strength
-        rand_seed=1,
+        no_mutation=mutation_config["no_mutation"],
+        architecture=mutation_config["architecture"],
+        new_layer_prob=mutation_config["new_layer_prob"],
+        parameters=mutation_config["parameters"],
+        activation=mutation_config["activation"],
+        rl_hp=mutation_config["rl_hp"],
+        mutation_sd=mutation_config["mutation_sd"],
+        rand_seed=config.seed,
         device=device,
     )
 
-    # Define training loop parameters
-    max_steps = 2_000_000  # Max steps (default: 2000000)
-    learning_delay = 0  # Steps before starting learning
-    evo_steps = 10_000  # Evolution frequency
-    eval_steps = None  # Evaluation steps per episode - go until done
-    eval_loop = 1  # Number of evaluation episodes
-    elite = pop[0]  # Assign a placeholder "elite" agent
+    # Initialize training variables
     total_steps = 0
-    
-    # Lista para armazenar pontuações médias para plotagem
     training_scores_history = []
 
+    # Register new experiment
+    results_tracker.register_experiment(
+        exp_id=exp_id,
+        name=config.name,
+        config_path=args.config,
+        start_time=datetime.now(),
+    )
+
+    print("-" * 60)
+    print("Starting training...")
+    print("-" * 60)
+    print()
+
+    # Initialize training variables
+    elite = pop[0]  # Placeholder elite agent
+    start_time = time.time()
+
     # TRAINING LOOP
-    print("Training...")
+    print("-" * 60)
+    print(f"Starting training: {total_steps:,} / {max_steps:,} steps")
+    print("-" * 60)
+    print()
     pbar = default_progress_bar(max_steps)
     while np.less([agent.steps[-1] for agent in pop], max_steps).all():
         pop_episode_scores = []
@@ -259,65 +330,47 @@ if __name__ == "__main__":
         elite, pop = tournament.select(pop)
         pop = mutations.mutation(pop)
 
+        # Update progress tracker
+        elapsed_time = time.time() - start_time
+        fitness_avg = np.mean([agent.fitness[-5:] for agent in pop if len(agent.fitness) >= 5])
+        best_score = max([s for s in mean_scores if isinstance(s, (int, float))], default=0)
+        worst_score = min([s for s in mean_scores if isinstance(s, (int, float))], default=0)
+
+        progress_tracker.update(
+            step=total_steps,
+            elapsed_time=elapsed_time,
+            mean_score=population_mean_score,
+            best_score=best_score,
+            worst_score=worst_score,
+            fitness_avg=fitness_avg,
+            elite_mutations=elite.mut if hasattr(elite, 'mut') else 0,
+        )
+
         # Update step counter
         for agent in pop:
             agent.steps.append(agent.steps[-1])
 
-    # Create timestamped directory for this training run
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = f"./models/MATD3/{timestamp}"
-    os.makedirs(path, exist_ok=True)
+    # Training complete!
+    print()
+    print("=" * 60)
+    print("TRAINING COMPLETE!")
+    print("=" * 60)
+    print()
 
-    # Save the trained algorithm
-    filename = "MATD3_trained_agent.pt"
-    save_path = os.path.join(path, filename)
-    elite.save_checkpoint(save_path)
-    print(f"Modelo salvo em: {save_path}")
+    # Calculate final metrics
+    final_mean_score = training_scores_history[-1] if training_scores_history else 0
+    best_score = max(training_scores_history) if training_scores_history else 0
+    worst_score = min(training_scores_history) if training_scores_history else 0
+    total_duration_hours = (time.time() - start_time) / 3600
 
-    # Save hyperparameters to txt file
-    params_path = os.path.join(path, "hyperparameters.txt")
-    with open(params_path, 'w') as f:
-        f.write("=" * 60 + "\n")
-        f.write(f"Training Run: {timestamp}\n")
-        f.write("=" * 60 + "\n\n")
+    # Save model temporarily
+    temp_model_path = f"/tmp/{exp_id}_model.pt"
+    elite.save_checkpoint(temp_model_path)
 
-        f.write("INITIAL HYPERPARAMETERS:\n")
-        f.write("-" * 60 + "\n")
-        for key, value in INIT_HP.items():
-            if key != "AGENT_IDS":  # Skip agent IDs (they're env-specific)
-                f.write(f"{key:20s} = {value}\n")
+    # Create plots
+    temp_plot_path = f"/tmp/{exp_id}_plot.png"
+    temp_data_path = f"/tmp/{exp_id}_data.npy"
 
-        f.write("\n")
-        f.write("NETWORK CONFIGURATION:\n")
-        f.write("-" * 60 + "\n")
-        for key, value in NET_CONFIG.items():
-            f.write(f"{key:20s} = {value}\n")
-
-        f.write("\n")
-        f.write("TRAINING SETTINGS:\n")
-        f.write("-" * 60 + "\n")
-        f.write(f"{'max_steps':20s} = {max_steps}\n")
-        f.write(f"{'num_envs':20s} = {num_envs}\n")
-        f.write(f"{'evo_steps':20s} = {evo_steps}\n")
-        f.write(f"{'device':20s} = {device}\n")
-
-        f.write("\n")
-        f.write("FINAL RESULTS:\n")
-        f.write("-" * 60 + "\n")
-        f.write(f"{'Final Mean Score':20s} = {training_scores_history[-1]:.2f}\n")
-        f.write(f"{'Best Score':20s} = {max(training_scores_history):.2f}\n")
-        f.write(f"{'Worst Score':20s} = {min(training_scores_history):.2f}\n")
-
-    print(f"Hiperparâmetros salvos em: {params_path}")
-
-    # Create symlink to latest model for easy access
-    latest_link = "./models/MATD3/latest"
-    if os.path.islink(latest_link):
-        os.unlink(latest_link)
-    os.symlink(timestamp, latest_link, target_is_directory=True)
-    print(f"Link simbólico 'latest' criado apontando para: {timestamp}")
-
-    # Plotar e salvar a evolução das pontuações
     plt.figure(figsize=(12, 6))
     plt.plot(training_scores_history, linewidth=2)
     plt.title('Evolução das Pontuações Médias Durante o Treinamento', fontsize=14)
@@ -325,18 +378,78 @@ if __name__ == "__main__":
     plt.ylabel('Pontuação Média da População', fontsize=12)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
+    plt.savefig(temp_plot_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
-    # Salvar o gráfico
-    plot_path = os.path.join(path, "training_scores_evolution.png")
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    print(f"Gráfico de evolução das pontuações salvo em: {plot_path}")
+    np.save(temp_data_path, np.array(training_scores_history))
 
-    # Salvar dados das pontuações em arquivo numpy
-    scores_data_path = os.path.join(path, "training_scores_history.npy")
-    np.save(scores_data_path, np.array(training_scores_history))
-    print(f"Dados das pontuações salvos em: {scores_data_path}")
+    # Save results using results tracker
+    results_tracker.save_training_artifacts(
+        exp_id=exp_id,
+        model_path=temp_model_path,
+        scores_plot_path=temp_plot_path,
+        scores_data_path=temp_data_path,
+    )
 
-    plt.show()
+    # Save detailed metrics JSON
+    metrics = {
+        "experiment": {
+            "id": exp_id,
+            "name": config.name,
+            "config": args.config,
+            "seed": config.seed,
+        },
+        "training": {
+            "steps": total_steps,
+            "duration_hours": total_duration_hours,
+            "num_envs": num_envs,
+            "evo_steps": evo_steps,
+        },
+        "final_performance": {
+            "mean_score": float(final_mean_score),
+            "best_score": float(best_score),
+            "worst_score": float(worst_score),
+            "std_score": float(np.std(training_scores_history)) if training_scores_history else 0,
+        },
+        "elite_agent": {
+            "lr_actor": elite.lr_actor if hasattr(elite, 'lr_actor') else INIT_HP["LR_ACTOR"],
+            "lr_critic": elite.lr_critic if hasattr(elite, 'lr_critic') else INIT_HP["LR_CRITIC"],
+            "batch_size": elite.batch_size if hasattr(elite, 'batch_size') else INIT_HP["BATCH_SIZE"],
+            "mutations_applied": elite.mut if hasattr(elite, 'mut') else 0,
+        },
+    }
+
+    results_tracker.save_metrics_json(exp_id, metrics)
+
+    # Finalize experiment in registry
+    results_tracker.finalize_experiment(
+        exp_id=exp_id,
+        steps=total_steps,
+        duration_hours=total_duration_hours,
+        final_score=final_mean_score,
+        best_score=best_score,
+        worst_score=worst_score,
+    )
+
+    # Summary
+    print()
+    print("=" * 60)
+    print("RESULTS SUMMARY")
+    print("=" * 60)
+    print(f"Experiment ID:     {exp_id}")
+    print(f"Total Steps:       {total_steps:,}")
+    print(f"Duration:          {total_duration_hours:.2f} hours")
+    print(f"Final Mean Score:  {final_mean_score:.2f}")
+    print(f"Best Score:        {best_score:.2f}")
+    print(f"Worst Score:       {worst_score:.2f}")
+    print()
+    print(f"Results saved in:  results/{exp_id}/")
+    print(f"Registry updated:  results/experiments.csv")
+    print()
+    print("=" * 60)
+    print()
+    print("TIP: Compare experiments with: python compare.py <exp_id1> <exp_id2>")
+    print()
 
     pbar.close()
     env.close()

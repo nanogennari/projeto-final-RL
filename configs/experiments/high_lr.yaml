@@ -1,0 +1,64 @@
+# High Learning Rate Configuration
+# Tests faster learning with higher learning rates
+
+name: "high_lr_matd3"
+description: "MATD3 with significantly higher learning rates for faster adaptation"
+seed: 42
+
+training:
+  max_steps: 2000000
+  num_envs: 8
+  evo_steps: 10000
+  checkpoint_interval: 100000
+  learning_delay: 0
+  eval_steps: null
+  eval_loop: 1
+
+hyperparameters:
+  population_size: 4
+  algo: "MATD3"
+  batch_size: 128
+  lr_actor: 0.001              # 10x higher than baseline
+  lr_critic: 0.005             # 5x higher than baseline
+  gamma: 0.95
+  memory_size: 100000
+  learn_step: 100
+  tau: 0.01
+  policy_freq: 2
+
+  o_u_noise: true
+  expl_noise: 0.1
+  mean_noise: 0.0
+  theta: 0.15
+  dt: 0.01
+
+network:
+  latent_dim: 64
+  encoder_hidden_size: [64]
+  head_hidden_size: [64]
+
+hpo_config:
+  lr_actor:
+    min: 0.0005
+    max: 0.01
+  lr_critic:
+    min: 0.001
+    max: 0.02
+  batch_size:
+    min: 8
+    max: 512
+    dtype: int
+  learn_step:
+    min: 20
+    max: 200
+    dtype: int
+    grow_factor: 1.5
+    shrink_factor: 0.75
+
+mutation:
+  no_mutation: 0.2
+  architecture: 0.2
+  new_layer: 0.2
+  parameter: 0.2
+  rl_hp: 0.2
+  mutation_sd: 0.1

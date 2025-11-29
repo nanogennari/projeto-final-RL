@@ -45,7 +45,7 @@ if __name__ == "__main__":
     print(f"Loaded model from: {path}")
 
     # Define test loop parameters
-    episodes = 10  # Number of episodes to test agent on
+    episodes = 30  # Number of episodes to test agent on
     max_steps = 25  # Max number of steps to take in the environment in each episode
 
 

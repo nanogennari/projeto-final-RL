@@ -1,4 +1,3 @@
-
 services:
   training:
     image: projeto-final-rl:latest
@@ -6,7 +5,11 @@ services:
     volumes:
       - ./main.py:/app/main.py
       - ./replay.py:/app/replay.py
-      - ./models:/app/models
+      - ./smpe.py:/app/smpe.py
+      - ./src:/app/src
+      - ./configs:/app/configs
+      - ./progress:/app/progress
+      - ./results:/app/results
       - ./videos:/app/videos
     deploy:
       resources:
@@ -14,7 +17,7 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 
   replay:
     image: projeto-final-rl:latest
@@ -22,6 +25,23 @@ services:
     volumes:
       - ./main.py:/app/main.py
       - ./replay.py:/app/replay.py
+      - ./src:/app/src
+      - ./configs:/app/configs
+      - ./progress:/app/progress
+      - ./results:/app/results
+      - ./videos:/app/videos
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+  run_smpe:
+    image: projeto-final-rl:latest
+    command: python run_smpe.py
+    volumes:
+      - ./run_smpe.py:/app/run_smpe.py
       - ./models:/app/models
       - ./videos:/app/videos
     deploy:
@@ -30,18 +50,4 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
-  run_smpe:
-          image: projeto-final-rl:latest
-          command: python run_smpe.py
-          volumes:
-            - ./run_smpe.py:/app/run_smpe.py
-            - ./models:/app/models
-            - ./videos:/app/videos
-          deploy:
-            resources:
-              reservations:
-                devices:
-                - driver: nvidia
-                  count: all
-                  capabilities: [gpu]
+              capabilities: [ gpu ]

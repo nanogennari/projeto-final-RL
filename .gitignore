@@ -165,3 +165,8 @@ Desktop.ini
 
 # Docker volumes data
 .volumes/
+
+# Experiment management
+progress/
+results/
+!results/experiments.csv
