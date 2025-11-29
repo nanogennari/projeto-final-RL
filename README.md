@@ -1,16 +1,5 @@
-# Ambiente Multi-Agente Speaker-Listener
+# Branch de experimentos com MATD3 (e outros modelos) em múltiplas configurações de parâmetros
 
-Este projeto implementa um ambiente de aprendizado por reforço multi-agente baseado no [ambiente Speaker-Listener](https://pettingzoo.farama.org/environments/mpe/simple_speaker_listener), onde dois agentes colaboram para resolver tarefas de comunicação e coordenação.   Os Agentes são treinados usando o Algoritmo MATD3.
-Esta [implementação](https://docs.agilerl.com/en/latest/tutorials/pettingzoo/matd3.html#matd3-tutorial) é fornecida pelo pacote AgileRL, sem garantias de performance.
-
-## Visão Geral
-
-O ambiente Speaker-Listener consiste em dois agentes com papéis distintos:
-
-- **Speaker (Falante)**: Fala mas não pode se mover.
-- **Listener (Ouvinte)**: Ouve as mensagens do Speaker e precisa navegar até O alvo.
-
-Um descrição detalhada deste ambiente pode ser encontrada [neste artigo](https://arxiv.org/pdf/1706.02275)
 
 ** Executar o treinamento com configuração específica:**
 ```bash
