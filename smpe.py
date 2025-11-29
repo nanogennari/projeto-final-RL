@@ -42,6 +42,39 @@ import shutil
 from pathlib import Path
 
 
+DEFAULT_NET_CONFIG: dict[str, Any] = {
+    "latent_dim": 64,
+    "encoder_config": {
+        "hidden_size": [64],
+    },
+    "head_config": {
+        "hidden_size": [64],
+    },
+}
+
+DEFAULT_INIT_HP: dict[str, Any] = {
+    "POPULATION_SIZE": 4,
+    "ALGO": "SMPE",
+    "BATCH_SIZE": 128,
+    "LR_ACTOR": 0.0001,
+    "LR_CRITIC": 0.001,
+    "GAMMA": 0.95,
+    "MEMORY_SIZE": 100000,
+    "LEARN_STEP": 100,
+    "TAU": 0.01,
+    "BELIEF_LATENT_DIM": 16,
+}
+
+DEFAULT_TRAINING_PARAMS: dict[str, Any] = {
+    "max_steps": 2_000_000,
+    "num_envs": 8,
+    "learning_delay": 0,
+    "evo_steps": 10_000,
+    "eval_steps": None,
+    "eval_loop": 1,
+}
+
+
 # ==========================
 #   Non-evolvable helpers
 # ==========================
@@ -101,7 +134,6 @@ class BeliefNoveltyModule:
         prev = self.counts.get(key, 0)
         self.counts[key] = prev + 1
         return 1.0 / math.sqrt(self.counts[key])
-
 
 # ==========================
 #          SMPE
@@ -914,63 +946,44 @@ class SMPE(MultiAgentRLAlgorithm):
         return float(mean_fit)
 
 
-if __name__ == "__main__":
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+def main(
+    net_config: Optional[dict[str, Any]] = None,
+    init_hp: Optional[dict[str, Any]] = None,
+    training_params: Optional[dict[str, Any]] = None,
+    device: Optional[str] = None,
+) -> None:
+    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    net_config = {**DEFAULT_NET_CONFIG, **(net_config or {})}
+    init_hp = {**DEFAULT_INIT_HP, **(init_hp or {})}
+    training_params = {**DEFAULT_TRAINING_PARAMS, **(training_params or {})}
+
+    max_steps = training_params["max_steps"]
+    num_envs = training_params["num_envs"]
+    learning_delay = training_params["learning_delay"]
+    evo_steps = training_params["evo_steps"]
+    eval_steps = training_params["eval_steps"]
+    eval_loop = training_params["eval_loop"]
+
     print("===== AgileRL Online Multi-Agent Demo (SMPE) =====")
-
-    # Define the network configuration
-    # NOTE: SMPE currently does not use NET_CONFIG internally,
-    # but create_population still requires it.
-
-    NET_CONFIG = {
-        "latent_dim": 64,
-        "encoder_config": {
-            "hidden_size": [64],
-        },
-        "head_config": {
-            "hidden_size": [64],
-        },
-    }
-    print(f"NET_CONFIG assigned: {NET_CONFIG}")
-
-    # Define the initial hyperparameters for SMPE
-    INIT_HP = {
-        "POPULATION_SIZE": 4,
-        "ALGO": "SMPE",        # Algorithm name (must match registry)
-        "BATCH_SIZE": 128,     # Batch size
-        "LR_ACTOR": 0.0001,    # Actor learning rate
-        "LR_CRITIC": 0.001,    # Critic learning rate
-        "GAMMA": 0.95,         # Discount factor
-        "MEMORY_SIZE": 100000, # Max memory buffer size
-        "LEARN_STEP": 100,     # Learning frequency
-        "TAU": 0.01,           # Unused by SMPE but kept for consistency
-        # SMPE-specific (if your SMPE.__init__ reads it from net_config you can omit this):
-        "BELIEF_LATENT_DIM": 16,  # Will be mapped to belief_latent_dim if supported
-    }
-    print(f"INIT_HP assigned: {INIT_HP}")
-
-    num_envs = 8
+    print(f"NET_CONFIG assigned: {net_config}")
+    print(f"INIT_HP assigned: {init_hp}")
     print(f"num_envs assigned: {num_envs}")
 
     def make_env():
-        # SMPE supports *discrete* actions; use continuous_actions=False
         return simple_speaker_listener_v4.parallel_env(continuous_actions=False)
 
     env = make_multi_agent_vect_envs(env=make_env, num_envs=num_envs)
     print(f"env created with agents: {getattr(env, 'agents', None)}")
 
-    # Configure the multi-agent algo input arguments
     observation_spaces = [env.single_observation_space(agent) for agent in env.agents]
     print(f"observation_spaces assigned: {[str(s) for s in observation_spaces]}")
 
     action_spaces = [env.single_action_space(agent) for agent in env.agents]
     print(f"action_spaces assigned: {[str(s) for s in action_spaces]}")
 
-    # Append number of agents and agent IDs to the initial hyperparameter dictionary
-    INIT_HP["AGENT_IDS"] = env.agents
-    print(f"INIT_HP['AGENT_IDS'] assigned: {INIT_HP['AGENT_IDS']}")
+    init_hp["AGENT_IDS"] = env.agents
+    print(f"INIT_HP['AGENT_IDS'] assigned: {init_hp['AGENT_IDS']}")
 
-    # Mutation config for RL hyperparameters
     hp_config = HyperparameterConfig(
         lr_actor=RLParameter(min=1e-4, max=1e-2),
         lr_critic=RLParameter(min=1e-4, max=1e-2),
@@ -981,52 +994,46 @@ if __name__ == "__main__":
     )
     print(f"hp_config assigned: {hp_config}")
 
-    # Create a population ready for evolutionary hyper-parameter optimisation
     pop: list[SMPE] = []
-    for idx in range(INIT_HP["POPULATION_SIZE"]):
+    for idx in range(init_hp["POPULATION_SIZE"]):
         agent = SMPE(
             observation_spaces=observation_spaces,
             action_spaces=action_spaces,
-            agent_ids=INIT_HP["AGENT_IDS"],
-            batch_size=INIT_HP["BATCH_SIZE"],
-            lr_actor=INIT_HP["LR_ACTOR"],
-            lr_critic=INIT_HP["LR_CRITIC"],
-            learn_step=INIT_HP["LEARN_STEP"],
-            gamma=INIT_HP["GAMMA"],
-            belief_latent_dim=INIT_HP["BELIEF_LATENT_DIM"],
+            agent_ids=init_hp["AGENT_IDS"],
+            batch_size=init_hp["BATCH_SIZE"],
+            lr_actor=init_hp["LR_ACTOR"],
+            lr_critic=init_hp["LR_CRITIC"],
+            learn_step=init_hp["LEARN_STEP"],
+            gamma=init_hp["GAMMA"],
+            belief_latent_dim=init_hp["BELIEF_LATENT_DIM"],
             hp_config=hp_config,
-            index=idx,        # important for tournament/mutation bookkeeping
+            index=idx,
             device=device,
         )
-        # Initialize filter optimizers after registry init
         agent._init_filter_optimizers()
         pop.append(agent)
 
     print(f"pop created with size: {len(pop)}")
 
-    # Configure the multi-agent replay buffer
     field_names = ["obs", "action", "reward", "next_obs", "done"]
     print(f"field_names assigned: {field_names}")
 
     memory = MultiAgentReplayBuffer(
-        INIT_HP["MEMORY_SIZE"],
+        init_hp["MEMORY_SIZE"],
         field_names=field_names,
-        agent_ids=INIT_HP["AGENT_IDS"],
+        agent_ids=init_hp["AGENT_IDS"],
         device=device,
     )
-    print(f"memory created: size={INIT_HP['MEMORY_SIZE']} agents={INIT_HP['AGENT_IDS']}")
+    print(f"memory created: size={init_hp['MEMORY_SIZE']} agents={init_hp['AGENT_IDS']}")
 
-    # Instantiate a tournament selection object (used for HPO)
     tournament = TournamentSelection(
-        tournament_size=2,  # Tournament selection size
-        elitism=True,       # Elitism in tournament selection
-        population_size=INIT_HP["POPULATION_SIZE"],  # Population size
-        eval_loop=1,        # Evaluate using last N fitness scores
+        tournament_size=2,
+        elitism=True,
+        population_size=init_hp["POPULATION_SIZE"],
+        eval_loop=1,
     )
     print(f"tournament assigned: {tournament}")
 
-    # Instantiate a mutations object (used for HPO)
-    # For SMPE, disable architecture/parameter mutations, keep only RL HP mutations.
     mutations = Mutations(
         no_mutation=0.2,
         architecture=0.2,
@@ -1040,53 +1047,40 @@ if __name__ == "__main__":
     )
     print(f"mutations assigned: {mutations}")
 
-    # Define training loop parameters
-    max_steps = 2_000_000  # Max steps (default: 2000000)
     print(f"max_steps assigned: {max_steps}")
-    learning_delay = 0     # Steps before starting learning
     print(f"learning_delay assigned: {learning_delay}")
-    evo_steps = 10_000     # Evolution frequency
     print(f"evo_steps assigned: {evo_steps}")
-    eval_steps = None      # Evaluation steps per episode - go until done
     print(f"eval_steps assigned: {eval_steps}")
-    eval_loop = 1          # Number of evaluation episodes
     print(f"eval_loop assigned: {eval_loop}")
-    elite = pop[0]         # Assign a placeholder "elite" agent
+
+    elite = pop[0]
     print(f"elite assigned: {elite}")
+
     total_steps = 0
     print(f"total_steps assigned: {total_steps}")
 
-    # Lista para armazenar pontuações médias para plotagem
-    training_scores_history = []
+    training_scores_history: list[float] = []
     print("training_scores_history assigned: []")
 
-    # TRAINING LOOP
     print("Training...")
     start_time = datetime.now()
     pbar = default_progress_bar(max_steps)
     while np.less([agent.steps[-1] for agent in pop], max_steps).all():
-        pop_episode_scores = []
-        for agent in pop:  # Loop through population
+        pop_episode_scores: list[list[float]] = []
+        for agent in pop:
             agent.set_training_mode(True)
-            obs, info = env.reset()  # Reset environment at start of episode
+            obs, info = env.reset()
             scores = np.zeros(num_envs)
-            completed_episode_scores = []
+            completed_episode_scores: list[float] = []
             steps = 0
             for idx_step in range(evo_steps // num_envs):
-                # For SMPE, both returned dicts contain discrete int actions
-                action, _ = agent.get_action(
-                    obs=obs, infos=info
-                )  # Predict action
-                next_obs, reward, termination, truncation, info = env.step(
-                    action
-                )  # Act in environment
+                action, _ = agent.get_action(obs=obs, infos=info)
+                next_obs, reward, termination, truncation, info = env.step(action)
 
                 scores += np.sum(np.array(list(reward.values())).transpose(), axis=-1)
                 total_steps += num_envs
                 steps += num_envs
 
-                # Save experiences to replay buffer
-                # IMPORTANT: For SMPE we store the same actions we pass to the env
                 memory.save_to_memory(
                     obs,
                     action,
@@ -1096,8 +1090,6 @@ if __name__ == "__main__":
                     is_vectorised=True,
                 )
 
-                # Learn according to learning frequency
-                # Handle learn steps > num_envs
                 if agent.learn_step > num_envs:
                     learn_step = agent.learn_step // num_envs
                     if (
@@ -1105,28 +1097,15 @@ if __name__ == "__main__":
                         and len(memory) >= agent.batch_size
                         and memory.counter > learning_delay
                     ):
-                        experiences = memory.sample(
-                            agent.batch_size
-                        )  # Sample replay buffer
-                        agent.learn(
-                            experiences
-                        )  # Learn according to agent's RL algorithm
-
-                # Handle num_envs > learn step; learn multiple times per step in env
-                elif (
-                    len(memory) >= agent.batch_size and memory.counter > learning_delay
-                ):
+                        experiences = memory.sample(agent.batch_size)
+                        agent.learn(experiences)
+                elif len(memory) >= agent.batch_size and memory.counter > learning_delay:
                     for _ in range(num_envs // agent.learn_step):
-                        experiences = memory.sample(
-                            agent.batch_size
-                        )  # Sample replay buffer
-                        agent.learn(
-                            experiences
-                        )  # Learn according to agent's RL algorithm
+                        experiences = memory.sample(agent.batch_size)
+                        agent.learn(experiences)
 
                 obs = next_obs
 
-                # Calculate scores and handle finished episodes
                 term_array = np.array(list(termination.values())).transpose()
                 trunc_array = np.array(list(truncation.values())).transpose()
                 for idx, (d, t) in enumerate(zip(term_array, trunc_array)):
@@ -1140,33 +1119,22 @@ if __name__ == "__main__":
             agent.steps[-1] += steps
             pop_episode_scores.append(completed_episode_scores)
 
-        # Evaluate population
         fitnesses = [
-            agent.test(
-                env,
-                max_steps=eval_steps,
-                loop=eval_loop,
-            )
+            agent.test(env, max_steps=eval_steps, loop=eval_loop)
             for agent in pop
         ]
         mean_scores = [
-            (
-                np.mean(episode_scores)
-                if len(episode_scores) > 0
-                else 0
-            )
+            np.mean(episode_scores) if len(episode_scores) > 0 else 0
             for episode_scores in pop_episode_scores
         ]
 
-        # Salvar pontuação média da população para plotagem
-        population_mean_score = np.mean([score for score in mean_scores if isinstance(score, (int, float))])
+        population_mean_score = np.mean([
+            score for score in mean_scores if isinstance(score, (int, float))
+        ])
         training_scores_history.append(population_mean_score)
 
         mean_scores_display = [
-            (
-                score if isinstance(score, (int, float))
-                else "0 completed episodes"
-            )
+            score if isinstance(score, (int, float)) else "0 completed episodes"
             for score in mean_scores
         ]
 
@@ -1179,30 +1147,24 @@ if __name__ == "__main__":
             f"Mutations: {[agent.mut for agent in pop]}"
         )
 
-        # Tournament selection and population mutation
         elite, pop = tournament.select(pop)
         pop = mutations.mutation(pop)
 
-        # Update step counter
         for agent in pop:
             agent.steps.append(agent.steps[-1])
 
-    # Create experiment directory matching other experiments
     exp_id = f"exp_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     path = f"./results/{exp_id}"
     os.makedirs(path, exist_ok=True)
 
-    # Save the trained model
     model_path = os.path.join(path, f"{exp_id}_model.pt")
     elite.save_checkpoint(model_path)
     print(f"Model saved: {model_path}")
 
-    # Save training scores data
     scores_data_path = os.path.join(path, f"{exp_id}_data.npy")
     np.save(scores_data_path, np.array(training_scores_history))
     print(f"Training data saved: {scores_data_path}")
 
-    # Plot and save training scores
     plt.figure(figsize=(12, 6))
     plt.plot(training_scores_history, linewidth=2)
     plt.title('Training Progress - SMPE', fontsize=14)
@@ -1216,37 +1178,33 @@ if __name__ == "__main__":
     print(f"Plot saved: {plot_path}")
     plt.close()
 
-    # Save metrics.json
     metrics = {
         "final_score": float(training_scores_history[-1]),
         "best_score": float(max(training_scores_history)),
         "worst_score": float(min(training_scores_history)),
         "total_iterations": len(training_scores_history),
-        "hyperparameters": {k: v for k, v in INIT_HP.items() if k != "AGENT_IDS"},
-        "network_config": NET_CONFIG,
+        "hyperparameters": {k: v for k, v in init_hp.items() if k != "AGENT_IDS"},
+        "network_config": net_config,
         "training": {
             "max_steps": max_steps,
             "num_envs": num_envs,
             "evo_steps": evo_steps,
             "device": device,
-        }
+        },
     }
     metrics_path = os.path.join(path, "metrics.json")
     with open(metrics_path, 'w') as f:
         json.dump(metrics, f, indent=2)
     print(f"Metrics saved: {metrics_path}")
 
-    # Copy config file to results directory
     config_path = "configs/experiments/smpe_baseline.yaml"
     if Path(config_path).exists():
         shutil.copy(config_path, os.path.join(path, "config.yaml"))
 
-    # Register in experiments.csv
     end_time = datetime.now()
     duration_hours = (end_time - start_time).total_seconds() / 3600
     registry_path = "./results/experiments.csv"
 
-    # Create CSV if it doesn't exist
     if not Path(registry_path).exists():
         with open(registry_path, 'w', newline='') as f:
             writer = csv.writer(f)
@@ -1256,7 +1214,6 @@ if __name__ == "__main__":
                 "worst_score", "config_path"
             ])
 
-    # Append experiment entry
     with open(registry_path, 'a', newline='') as f:
         writer = csv.writer(f)
         writer.writerow([
@@ -1278,3 +1235,7 @@ if __name__ == "__main__":
 
     pbar.close()
     env.close()
+
+
+if __name__ == "__main__":
+    main()

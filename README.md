@@ -16,6 +16,9 @@ docker build -t projeto-final-rl:latest .
 # Usar configuração baseline (padrão)
 docker compose run --rm training
 
+# Usar configuração SMPE
+docker compose run --rm run_smpe
+
 # Ou especificar uma configuração customizada
 docker compose run --rm training python main.py --config configs/experiments/improved.yaml
 ```
@@ -145,15 +148,6 @@ Resultados detalhados por experimento em `results/exp_YYYYMMDD_HHMMSS/`:
 2. **Iniciar o treinamento**:
    ```bash
    docker compose run --rm training python main.py --config $config
-   ```
-
-3. **Monitorar em tempo real** (em outro terminal):
-   ```bash
-   # Ver resumo atual
-   python summary.py
-
-   # Ou monitorar continuamente
-   watch -n 10 python summary.py
    ```
 
 ### Executar Múltiplos Experimentos

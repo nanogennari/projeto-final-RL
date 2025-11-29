@@ -4,8 +4,6 @@ services:
     command: python main.py
     volumes:
       - ./main.py:/app/main.py
-      - ./replay.py:/app/replay.py
-      - ./smpe.py:/app/smpe.py
       - ./src:/app/src
       - ./configs:/app/configs
       - ./progress:/app/progress
@@ -23,7 +21,6 @@ services:
     image: projeto-final-rl:latest
     command: python replay.py
     volumes:
-      - ./main.py:/app/main.py
       - ./replay.py:/app/replay.py
       - ./src:/app/src
       - ./configs:/app/configs
@@ -39,11 +36,11 @@ services:
               capabilities: [ gpu ]
   run_smpe:
     image: projeto-final-rl:latest
-    command: python run_smpe.py
+    command: python smpe.py
     volumes:
-      - ./run_smpe.py:/app/run_smpe.py
-      - ./models:/app/models
-      - ./videos:/app/videos
+      - ./smpe.py:/app/smpe.py
+      - ./progress:/app/progress
+      - ./results:/app/results
     deploy:
       resources:
         reservations:

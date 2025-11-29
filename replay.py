@@ -1,5 +1,6 @@
 import os
-
+import argparse
+import pandas as pd
 import imageio
 import numpy as np
 import torch
@@ -26,7 +27,26 @@ def _label_with_episode_number(frame, episode_num):
     return im
 
 
-if __name__ == "__main__":
+def get_latest_experiment():
+    """Get the latest experiment ID from experiments.csv"""
+    try:
+        df = pd.read_csv('results/experiments.csv')
+        if not df.empty:
+            # Get the last exp_id from the CSV
+            last_exp_id = df.iloc[-1]['exp_id']
+            return last_exp_id
+    except (FileNotFoundError, KeyError, pd.errors.EmptyDataError):
+        pass
+    return None
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Test MATD3 on simple_speaker_listener')
+    parser.add_argument('--model', type=str, help='Path to the model file. If not provided, uses latest from experiments.csv')
+    parser.add_argument('--output', type=str, help='Output gif path', default=None)
+
+    args = parser.parse_args()
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Configure the environment
@@ -39,15 +59,34 @@ if __name__ == "__main__":
     n_agents = env.num_agents
     agent_ids = env.agents
 
-    # Load the saved agent (from latest training run)
-    path = "./models/MATD3/latest/MATD3_trained_agent.pt"
-    matd3 = MATD3.load(path, device)
-    print(f"Loaded model from: {path}")
+    # Determine model path
+    if args.model:
+        exp_id = args.model
+    else:
+        # Get latest experiment ID
+        exp_id = get_latest_experiment()
+        if exp_id is None:
+            raise ValueError("No model path provided and no experiments found in results/experiments.csv")
+    model_path = f"results/{exp_id}/{exp_id}_model.pt"
+
+    # Determine output path
+    if args.output:
+        output_path = args.output
+    else:
+        if args.model:
+            # Extract exp_name from model path
+            exp_name = os.path.splitext(os.path.basename(args.model))[0].replace('_model', '')
+        else:
+            exp_name = get_latest_experiment()
+        output_path = f"results/{exp_name}/{exp_name}_speaker_listener.gif"
+
+    # Load the saved agent
+    matd3 = MATD3.load(model_path, device)
+    print(f"Loaded model from: {model_path}")
 
     # Define test loop parameters
-    episodes = 30  # Number of episodes to test agent on
+    episodes = 15  # Number of episodes to test agent on
     max_steps = 25  # Max number of steps to take in the environment in each episode
-
 
     rewards = []  # List to collect total episodic reward
     frames = []  # List to collect frames
@@ -96,9 +135,13 @@ if __name__ == "__main__":
             print(f"{agent_id} reward: {reward_list[-1]}")
     env.close()
 
+    # Create output directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
     # Save the gif to specified path
-    gif_path = "./videos/"
-    os.makedirs(gif_path, exist_ok=True)
-    imageio.mimwrite(
-        os.path.join("./videos/", "speaker_listener.gif"), frames, duration=10
-    )
+    imageio.mimwrite(output_path, frames, duration=10)
+    print(f"Saved gif to: {output_path}")
+
+
+if __name__ == "__main__":
+    main()
