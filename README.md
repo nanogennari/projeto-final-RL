@@ -20,12 +20,21 @@ docker compose run --rm training
 docker compose run --rm training python main.py --config configs/experiments/improved.yaml
 ```
 
-** Comparar resultados de diferentes experimentos:**
+**Visualizar resultados de diferentes experimentos:**
+
+```bash
+# Plotar a evolução de todos os experimentos completados
+python plot_experiments.py
+
 # Listar todos os experimentos
 python compare.py --list
 
 # Comparar dois experimentos específicos
-python compare.py exp_20251127_143052 exp_20251127_190234
+python compare.py exp_20251128_123149 exp_20251128_134031
+
+# Comparar múltiplos experimentos com plot customizado
+python compare.py exp_001 exp_002 exp_003 --output my_comparison.png
+```
 
 ### Configurações YAML dos experimentos
 
@@ -56,7 +65,7 @@ training:
   max_steps: 2000000
   num_envs: 8
   evo_steps: 10000
-  checkpoint_interval: 100000 
+  checkpoint_interval: 100000
   learning_delay: 0
   eval_steps: null
   eval_loop: 1
@@ -326,6 +335,20 @@ Isso significa que:
 * o ajuste fino dos hiperparâmetros sensíveis do SMPE é automatizado;
 * o algoritmo pode ser reusado em novos cenários (por exemplo, diferentes tarefas da MPE, LBF, RWARE ou outros ambientes PettingZoo) sem precisar redesenhar o tuning do zero;
 * ganha-se um pipeline mais próximo de uso real: um único experimento com população evolutiva encontra tanto a política SMPE quanto uma configuração razoável de hiperparâmetros.
+
+---
+
+## Resultados
+
+### Evolução do Treinamento
+
+A figura abaixo mostra a evolução do treinamento de todos os experimentos completados, com médias móveis de 10 iterações:
+
+![Training Progress](training_progress.png)
+
+A linha verde tracejada representa o score alvo de -60.
+
+---
 
 [1]: https://github.com/ddaedalus/smpe "GitHub - ddaedalus/smpe: [ICML 2025] Official Code of SMPE: \"Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration\""
 [2]: https://arxiv.org/html/2505.05262v1 "Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration"
