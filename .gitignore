@@ -165,3 +165,8 @@ Desktop.ini
 
 # Docker volumes data
 .volumes/
+
+# Experiment management
+progress/             # Live progress CSVs (transient)
+results/              # Individual experiment results (keep registry only)
+!results/experiments.csv  # Keep experiment registry
