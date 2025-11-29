@@ -1,29 +1,5 @@
 # Projeto de Eduardo Vianna de Lima Fernandes Guimarães, Isaque Vieira Machado Pim e Juliano Genari de Araújo:
 
-# Ambiente Multi-Agente Speaker-Listener
-
-Este projeto implementa um ambiente de aprendizado por reforço multi-agente baseado no [ambiente Speaker-Listener](https://pettingzoo.farama.org/environments/mpe/simple_speaker_listener), onde dois agentes colaboram para resolver tarefas de comunicação e coordenação.   Os Agentes são treinados usando o Algoritmo MATD3.   
-Esta [implementação](https://docs.agilerl.com/en/latest/tutorials/pettingzoo/matd3.html#matd3-tutorial) é fornecida pelo pacote AgileRL, sem garantias de performance.
-
-## Visão Geral
-
-O ambiente Speaker-Listener consiste em dois agentes com papéis distintos:
-
-- **Speaker (Falante)**: Fala mas não pode se mover.
-- **Listener (Ouvinte)**: Ouve as mensagens do Speaker e precisa navegar até O alvo.
-
-Um descrição detalhada deste ambiente pode ser encontrada [neste artigo](https://arxiv.org/pdf/1706.02275)
-                              
-## Características
-- Ambiente colaborativo onde os agentes devem aprender a se comunicar eficazmente                     
-- Treinamento usando algoritmos de aprendizado por reforço multi-agente
-- Suporte para GPU via PyTorch CUDA         
-- Implementação modular e extensível 
-## Requisitos
-- Docker e Docker Compose (recomendado)
-- GPU NVIDIA com CUDA (para aceleração GPU)
-- **OU** Python 3.12+ com **uv** (para execução local)
-
 ## Como Usar
 
 ### Opção 1: Docker Compose (Recomendado)
@@ -63,38 +39,6 @@ Para gerar a visualização do modelo treinado:
 ```bash
 python replay.py
 ```
-
-## Organização dos Modelos
-
-O sistema detectará automaticamente se CUDA está disponível e utilizará GPU quando possível.
-
-**Cada execução de treinamento salva automaticamente:**
-
-```
-models/MATD3/
-├── 20251127_143052/              # Timestamped run
-│   ├── MATD3_trained_agent.pt    # Modelo treinado
-│   ├── hyperparameters.txt       # Todos os hiperparâmetros usados
-│   ├── training_scores_evolution.png  # Gráfico de evolução
-│   └── training_scores_history.npy    # Dados brutos
-├── 20251127_190234/              # Outra execução
-│   └── ...
-└── latest -> 20251127_190234/    # Symlink para o modelo mais recente
-```
-
-- Cada treinamento cria um diretório com timestamp único
-- Os hiperparâmetros são salvos em `hyperparameters.txt` para comparação
-- O link `latest/` sempre aponta para o modelo mais recente
-- `replay.py` carrega automaticamente o modelo mais recente
-
-
-
-## Tarefa
-
-Sua tarefa é implementar um novo algoritmo de aprendizado por reforço multi-agente para o ambiente Speaker-Listener. Este algoritmo deve ser capaz de fazer com que o listener consiga navegar até o alvo mais rápido do que o algoritmo [MATD3 original](https://docs.agilerl.com/en/latest/api/algorithms/matd3.html), ou seja, consiga alcançar um score médio maior que -60(score médio da configuração atual). Alternativamente você pode tentar melhorar a configuração do algoritmo atual de forma a superar  a performance atual.
-
-Para saber mais sobre o algoritmo MATD3, consulte [este artigo](https://arxiv.org/abs/1910.01465).
-
 
 # Nossa tentativa de inovação
 ## SMPE com HPO evolucionário em AgileRL
@@ -221,11 +165,11 @@ Em termos práticos:
 > **Inovação**
 > A nossa contribuição principal é **combinar o SMPE com HPO evolucionário do AgileRL**, expondo os módulos de *state modelling* (incluindo os AM filters) como entidades evolutivas. Até onde sabemos, ainda não há na literatura uma integração pública de **SMPE + HPO evolucionário em AgileRL**, o que torna este repositório um primeiro passo nessa direção.
 
-Na prática, isso significa que:
+Isso significa que:
 
-* o **ajuste fino dos hiperparâmetros sensíveis** do SMPE (e.g., pesos dos termos de loss, arquiteturas do VAE, intensidade de exploração intrínseca) é **automatizado**;
-* o algoritmo pode ser reusado em novos cenários (por exemplo, diferentes tarefas da MPE, LBF, RWARE ou outros ambientes PettingZoo) **sem precisar redesenhar o tuning** do zero;
-* ganha-se um pipeline mais próximo de uso real: **um único experimento com população evolutiva encontra tanto a política SMPE quanto uma configuração razoável de hiperparâmetros.**
+* o ajuste fino dos hiperparâmetros sensíveis do SMPE é automatizado;
+* o algoritmo pode ser reusado em novos cenários (por exemplo, diferentes tarefas da MPE, LBF, RWARE ou outros ambientes PettingZoo) sem precisar redesenhar o tuning do zero;
+* ganha-se um pipeline mais próximo de uso real: um único experimento com população evolutiva encontra tanto a política SMPE quanto uma configuração razoável de hiperparâmetros.
 
 [1]: https://github.com/ddaedalus/smpe "GitHub - ddaedalus/smpe: [ICML 2025] Official Code of SMPE: \"Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration\""
 [2]: https://arxiv.org/html/2505.05262v1 "Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration"
