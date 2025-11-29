@@ -154,7 +154,9 @@ Resumindo o **Algoritmo SMPE/SMPE²**: ([arXiv][2])
 3. **Cálculo de recompensa intrínseca**
 
    * Para cada agente, calcula hash de $(z_t^i)$ via SimHash, atualiza contagem e computa
-     $$r^{\text{int},i}_t = \frac{\beta}{\sqrt{N_i(\text{hash}(z_t^i))}}.$$
+  
+     $( r^{\text{int},i}_t = \frac{\beta}{\sqrt{N_i(\text{hash}(z_t^i))}}.)$
+     
    * Define a recompensa total usada no update de política como
      $(\tilde r_t^i = r_t + r^{\text{int},i}_t)$.
 
@@ -166,9 +168,9 @@ Resumindo o **Algoritmo SMPE/SMPE²**: ([arXiv][2])
    Periodicamente, para cada agente:
 
    * Minimiza a **loss de reconstrução filtrada**
-     $$\mathcal{L}*{\text{rec}}^i
-     = \mathbb{E}*{q_\phi^i(z\mid\tau)}
-     \big| (o^{-i} \odot w^i) - \hat o^{-i}(z)\big|^2,$$
+     $L*{rec}^i
+     = E*{q_\phi^i(z\mid\tau)}
+     \big| (o^{-i} \odot w^i) - \hat o^{-i}(z)\big|^2,$
      onde $(o^{-i})$ são observações dos outros agentes e $(\odot)$ é produto elemento a elemento. ([arXiv][2])
    * Adiciona:
 
@@ -185,7 +187,7 @@ Resumindo o **Algoritmo SMPE/SMPE²**: ([arXiv][2])
    * Minimiza erros TD correspondentes (loss de valor).
    * Atualiza o ator com gradiente de política usando estados estendidos $((o^i, z^i))$.
    * A loss total por agente combina:
-     $$\mathcal{L}^i = \mathcal{L}_{\text{SM}}^i \cdot \lambda_V \mathcal{L}_{\text{críticos}}^i - \lambda_\pi J_{\text{policy}}^i.$$
+     $(L^i = L_{SM}^i \cdot \lambda_V L_{crit}^i - \lambda_\pi J_{pol}^i.)$
 
 7. **Loop até o fim do treinamento**, com updates periódicos de *target networks* e dos encoders–decoders para estabilizar o cálculo dos bônus intrínsecos.
 
