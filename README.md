@@ -114,15 +114,15 @@ O trabalho trata de **multi-agent deep reinforcement learning (MARL)** em ambien
 A ideia central do SMPE é adicionar, em cima de um algoritmo MARL padrão (no paper, **MAA2C**), duas camadas extras:
 
 1. **State modelling auto-supervisionado**
-   Cada agente (i) aprende um modelo que, a partir do seu histórico local (\tau_t^i), infere uma **variável latente de crença** (z_t^i) sobre o estado global não observado.
+   Cada agente (i) aprende um modelo que, a partir do seu histórico local $(\tau_t^i)$, infere uma **variável latente de crença** $(z_t^i)$ sobre o estado global não observado.
 
    * Isso é feito com um **encoder–decoder variacional (VAE)** que tenta reconstruir **partes informativas** das observações dos outros agentes usando apenas a observação própria. ([arXiv][2])
-   * Para evitar redundância, o paper introduz os **Agent Modelling (AM) filters**: vetores de pesos (w^i\in[0,1]^d) que dizem quanto cada feature dos outros agentes é relevante para o agente (i).
+   * Para evitar redundância, o paper introduz os **Agent Modelling (AM) filters**: vetores de pesos $(w^i\in[0,1]^d)$ que dizem quanto cada feature dos outros agentes é relevante para o agente (i).
 
 2. **Exploração intrínseca “adversarial” no espaço de crenças**
-   Dado o embedding de crença (z_t^i), o método constrói uma **recompensa intrínseca count-based**:
+   Dado o embedding de crença $(z_t^i)$, o método constrói uma **recompensa intrínseca count-based**:
 
-   * Usa **SimHash** para projetar (z_t^i) num código discreto, conta visitas desse código e define um bônus (r^{\text{int},i}_t \propto 1/\sqrt{N_i(\text{hash}(z_t^i))}). ([arXiv][2])
+   * Usa **SimHash** para projetar $(z_t^i)$ num código discreto, conta visitas desse código e define um bônus $(r^{\text{int},i}_t \propto 1/\sqrt{N_i(\text{hash}(z_t^i))})$. ([arXiv][2])
    * Como os (z)’s também são alvos de reconstrução dos outros agentes, **descobrir crenças novas aumenta a perda de reconstrução deles**, forçando-os a melhorar seus modelos. Isso gera uma exploração **adversarial, mas pró-cooperação**: cada agente procura crenças novas que, ao mesmo tempo, enriquecem o modelo de estado dos demais.
 
 O resultado é um backbone MARL “turbinado” com:
@@ -140,63 +140,57 @@ Resumindo o **Algoritmo SMPE/SMPE²**: ([arXiv][2])
 
    * Actors e Critics do backbone MARL.
    * Encoders–decoders variacionais por agente (para o state modelling).
-   * AM filters (w^i) e suas redes.
+   * AM filters $(w^i)$ e suas redes.
    * *Replay buffer* compartilhado.
 
 2. **Coleta de dados**
    Para cada passo de tempo:
 
-   * Cada agente recebe observação local (o_t^i).
-   * Amostra crença (z_t^i \sim q_\phi^i(z\mid\tau_t^i)).
-   * Amostra ação (a_t^i \sim \pi_\theta^i(a\mid o_t^i, z_t^i)).
-   * Executa ações conjuntas, recebe recompensa global (r_t) e novas observações.
+   * Cada agente recebe observação local $(o_t^i)$.
+   * Amostra crença $(z_t^i \sim q_\phi^i(z\mid\tau_t^i))$.
+   * Amostra ação $(a_t^i \sim \pi_\theta^i(a\mid o_t^i, z_t^i))$.
+   * Executa ações conjuntas, recebe recompensa global $(r_t)$ e novas observações.
 
 3. **Cálculo de recompensa intrínseca**
 
-   * Para cada agente, calcula hash de (z_t^i) via SimHash, atualiza contagem e computa
-     [
-     r^{\text{int},i}_t = \frac{\beta}{\sqrt{N_i(\text{hash}(z_t^i))}}.
-     ]
+   * Para cada agente, calcula hash de $(z_t^i)$ via SimHash, atualiza contagem e computa
+     $$r^{\text{int},i}_t = \frac{\beta}{\sqrt{N_i(\text{hash}(z_t^i))}}.$$
    * Define a recompensa total usada no update de política como
-     (\tilde r_t^i = r_t + r^{\text{int},i}_t).
+     $(\tilde r_t^i = r_t + r^{\text{int},i}_t)$.
 
 4. **Armazenamento**
 
-   * Armazena transições ((o_t, a_t, \tilde r_t, o_{t+1}, \ldots)) no *buffer*.
+   * Armazena transições $((o_t, a_t, \tilde r_t, o_{t+1}, \ldots))$ no *buffer*.
 
 5. **Atualização do state modelling (VAE + AM filters)**
    Periodicamente, para cada agente:
 
    * Minimiza a **loss de reconstrução filtrada**
-     [
-     \mathcal{L}*{\text{rec}}^i
+     $$\mathcal{L}*{\text{rec}}^i
      = \mathbb{E}*{q_\phi^i(z\mid\tau)}
-     \big| (o^{-i} \odot w^i) - \hat o^{-i}(z)\big|^2,
-     ]
-     onde (o^{-i}) são observações dos outros agentes e (\odot) é produto elemento a elemento. ([arXiv][2])
+     \big| (o^{-i} \odot w^i) - \hat o^{-i}(z)\big|^2,$$
+     onde $(o^{-i})$ são observações dos outros agentes e $(\odot)$ é produto elemento a elemento. ([arXiv][2])
    * Adiciona:
 
-     * termo **KL** para o VAE: (\mathrm{KL}\big(q_\phi^i(z\mid\tau),|,\mathcal{N}(0,I)\big));
-     * regularização L2 nos filtros (w^i) para evitar colapso em zero.
-   * A combinação desses termos define a loss de **state modelling** (\mathcal{L}_{\text{SM}}^i).
+     * termo **KL** para o VAE: $(\mathrm{KL}\big(q_\phi^i(z\mid\tau),|,\mathcal{N}(0,I)\big))$;
+     * regularização L2 nos filtros $(w^i)$ para evitar colapso em zero.
+   * A combinação desses termos define a loss de **state modelling** $(\mathcal{L}_{\text{SM}}^i)$.
 
 6. **Atualização dos críticos e da política**
 
    * Mantém dois críticos:
 
-     * um crítico “normal” (V_\psi(s));
-     * um crítico “com crenças” (V_\omega(s, z^i)) que vê o estado filtrado na perspectiva do agente. ([arXiv][2])
+     * um crítico “normal” $(V_\psi(s))$;
+     * um crítico “com crenças” $(V_\omega(s, z^i))$ que vê o estado filtrado na perspectiva do agente. ([arXiv][2])
    * Minimiza erros TD correspondentes (loss de valor).
-   * Atualiza o ator com gradiente de política usando estados estendidos ((o^i, z^i)).
+   * Atualiza o ator com gradiente de política usando estados estendidos $((o^i, z^i))$.
    * A loss total por agente combina:
-     [
-     \mathcal{L}^i
+     $$\mathcal{L}^i
      = \mathcal{L}_{\text{SM}}^i
 
      * \lambda_V \mathcal{L}_{\text{críticos}}^i
 
-     - \lambda_\pi J_{\text{policy}}^i.
-       ]
+     - \lambda_\pi J_{\text{policy}}^i.$$
 
 7. **Loop até o fim do treinamento**, com updates periódicos de *target networks* e dos encoders–decoders para estabilizar o cálculo dos bônus intrínsecos.
 
