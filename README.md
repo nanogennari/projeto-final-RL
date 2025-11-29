@@ -185,16 +185,11 @@ Resumindo o **Algoritmo SMPE/SMPE²**: ([arXiv][2])
    * Minimiza erros TD correspondentes (loss de valor).
    * Atualiza o ator com gradiente de política usando estados estendidos $((o^i, z^i))$.
    * A loss total por agente combina:
-     $$\mathcal{L}^i
-     = \mathcal{L}_{\text{SM}}^i
-
-     * \lambda_V \mathcal{L}_{\text{críticos}}^i
-
-     - \lambda_\pi J_{\text{policy}}^i.$$
+     $$\mathcal{L}^i = \mathcal{L}_{\text{SM}}^i \cdot \lambda_V \mathcal{L}_{\text{críticos}}^i - \lambda_\pi J_{\text{policy}}^i.$$
 
 7. **Loop até o fim do treinamento**, com updates periódicos de *target networks* e dos encoders–decoders para estabilizar o cálculo dos bônus intrínsecos.
 
-Matematicamente, o paper mostra que o problema de **state modelling** é formulado de forma que o valor ótimo com beliefs (z) é equivalente ao valor ótimo do Dec-POMDP original (Proposição 2.1), ou seja, introduzir (z) **não restringe** o conjunto de políticas ótimas possíveis – ele só reparametriza o problema de forma mais informativa. ([arXiv][2])
+Matematicamente, o paper mostra que o problema de **state modelling** é formulado de forma que o valor ótimo com beliefs $(z)$ é equivalente ao valor ótimo do Dec-POMDP original (Proposição 2.1), ou seja, introduzir $(z)$ **não restringe** o conjunto de políticas ótimas possíveis – ele só reparametriza o problema de forma mais informativa. ([arXiv][2])
 
 ---
 
@@ -205,7 +200,7 @@ A implementação deste repositório parte do **código oficial do SMPE/SMPE²**
 A principal ideia é:
 
 * **Encapsular os componentes centrais do SMPE** (encoder–decoder de state modelling, AM filters, críticos adicionais, cálculo de bônus intrínseco) como um **`EvolvableModule`** do AgileRL. ([docs.agilerl.com][4])
-* Permitir que a infraestrutura de **HPO evolucionário** do AgileRL faça *mutation* e *selection* não só de hiperparâmetros clássicos (learning rates, coeficientes (\lambda), dimensão do embedding (z), peso da recompensa intrínseca (\beta) etc.), mas também de **submódulos da arquitetura SMPE**.
+* Permitir que a infraestrutura de **HPO evolucionário** do AgileRL faça *mutation* e *selection* não só de hiperparâmetros clássicos (learning rates, coeficientes $(\lambda)4, dimensão do embedding (z), peso da recompensa intrínseca (\beta) etc.), mas também de **submódulos da arquitetura SMPE**.
 
 Em termos práticos:
 
