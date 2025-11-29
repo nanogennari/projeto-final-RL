@@ -7,15 +7,11 @@ services:
     volumes:
       - ./main.py:/app/main.py
       - ./replay.py:/app/replay.py
-      - ./summary.py:/app/summary.py
-      - ./compare.py:/app/compare.py
       - ./smpe.py:/app/smpe.py
       - ./src:/app/src
       - ./configs:/app/configs
-      - ./checkpoints:/app/checkpoints
       - ./progress:/app/progress
       - ./results:/app/results
-      - ./models:/app/models
       - ./videos:/app/videos
     deploy:
       resources:
@@ -23,7 +19,7 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 
   replay:
     image: projeto-final-rl:latest
@@ -31,14 +27,10 @@ services:
     volumes:
       - ./main.py:/app/main.py
       - ./replay.py:/app/replay.py
-      - ./summary.py:/app/summary.py
-      - ./compare.py:/app/compare.py
       - ./src:/app/src
       - ./configs:/app/configs
-      - ./checkpoints:/app/checkpoints
       - ./progress:/app/progress
       - ./results:/app/results
-      - ./models:/app/models
       - ./videos:/app/videos
     deploy:
       resources:
@@ -46,4 +38,4 @@ services:
           devices:
             - driver: nvidia
               count: all
-              capabilities: [gpu]
+              capabilities: [ gpu ]
