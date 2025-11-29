@@ -1,0 +1,65 @@
+# Stable Learning Configuration
+# Conservative approach focused on stable, gradual improvement
+
+name: "stable_learning_matd3"
+description: "MATD3 with conservative settings for stable training"
+seed: 42
+
+training:
+  max_steps: 2000000
+  num_envs: 8
+  evo_steps: 10000
+  checkpoint_interval: 100000
+  learning_delay: 5000         # Delay learning to fill buffer
+  eval_steps: null
+  eval_loop: 1
+
+hyperparameters:
+  population_size: 4
+  algo: "MATD3"
+  batch_size: 256              # Larger batch for stability
+  lr_actor: 0.00005            # Very low learning rates
+  lr_critic: 0.0005
+  gamma: 0.99                  # High discount for long-term planning
+  memory_size: 200000          # Large buffer for diverse experiences
+  learn_step: 50               # Frequent learning
+  tau: 0.001                   # Very slow soft updates
+  policy_freq: 4               # Less frequent policy updates
+
+  o_u_noise: true
+  expl_noise: 0.05             # Lower exploration noise
+  mean_noise: 0.0
+  theta: 0.10                  # Slower mean reversion
+  dt: 0.01
+
+network:
+  latent_dim: 128
+  encoder_hidden_size: [128, 64]
+  head_hidden_size: [128, 64]
+
+hpo_config:
+  # Narrow search ranges for stability
+  lr_actor:
+    min: 0.00001
+    max: 0.001
+  lr_critic:
+    min: 0.0001
+    max: 0.005
+  batch_size:
+    min: 128
+    max: 512
+    dtype: int
+  learn_step:
+    min: 30
+    max: 100
+    dtype: int
+    grow_factor: 1.2
+    shrink_factor: 0.8
+
+mutation:
+  no_mutation: 0.5             # High - conservative mutations
+  architecture: 0.10
+  new_layer: 0.10
+  parameter: 0.20
+  rl_hp: 0.10
+  mutation_sd: 0.05            # Small mutations

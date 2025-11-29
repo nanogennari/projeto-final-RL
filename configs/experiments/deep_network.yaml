@@ -1,0 +1,64 @@
+# Deep Network Configuration
+# Uses very deep neural networks for better representation learning
+
+name: "deep_network_matd3"
+description: "MATD3 with deep neural networks for complex feature learning"
+seed: 42
+
+training:
+  max_steps: 2000000
+  num_envs: 8
+  evo_steps: 10000
+  checkpoint_interval: 100000
+  learning_delay: 0
+  eval_steps: null
+  eval_loop: 1
+
+hyperparameters:
+  population_size: 4
+  algo: "MATD3"
+  batch_size: 128
+  lr_actor: 0.0001             # Lower LR for deeper network stability
+  lr_critic: 0.0005
+  gamma: 0.95
+  memory_size: 100000
+  learn_step: 100
+  tau: 0.005                   # Slower updates for stability
+  policy_freq: 2
+
+  o_u_noise: true
+  expl_noise: 0.1
+  mean_noise: 0.0
+  theta: 0.15
+  dt: 0.01
+
+network:
+  latent_dim: 256              # 4x larger latent space
+  encoder_hidden_size: [256, 256, 128, 128]  # 4-layer deep actor
+  head_hidden_size: [256, 256, 128]          # 3-layer deep critic
+
+hpo_config:
+  lr_actor:
+    min: 0.00005
+    max: 0.001
+  lr_critic:
+    min: 0.0001
+    max: 0.005
+  batch_size:
+    min: 8
+    max: 512
+    dtype: int
+  learn_step:
+    min: 20
+    max: 200
+    dtype: int
+    grow_factor: 1.5
+    shrink_factor: 0.75
+
+mutation:
+  no_mutation: 0.15
+  architecture: 0.30           # Higher architecture mutation
+  new_layer: 0.30              # Encourage network evolution
+  parameter: 0.15
+  rl_hp: 0.10
+  mutation_sd: 0.1

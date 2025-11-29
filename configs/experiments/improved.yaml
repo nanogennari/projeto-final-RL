@@ -1,0 +1,67 @@
+# Improved MATD3 Configuration
+# Optimized hyperparameters based on research insights
+
+name: "improved_matd3"
+description: "Improved MATD3 with enhanced exploration and deeper networks"
+seed: 42
+
+training:
+  max_steps: 2000000
+  num_envs: 8
+  evo_steps: 10000
+  checkpoint_interval: 100000
+  learning_delay: 0
+  eval_steps: null
+  eval_loop: 1
+
+hyperparameters:
+  population_size: 6           # Larger population for better diversity
+  algo: "MATD3"
+  batch_size: 256              # Larger batch size
+  lr_actor: 0.0003             # Higher actor learning rate
+  lr_critic: 0.0015            # Higher critic learning rate
+  gamma: 0.98                  # Higher discount factor (long-term thinking)
+  memory_size: 200000          # Larger replay buffer
+  learn_step: 50               # More frequent learning
+  tau: 0.005                   # Slower soft updates (more stable)
+  policy_freq: 2
+
+  # Enhanced exploration
+  o_u_noise: true
+  expl_noise: 0.15            # Higher exploration noise
+  mean_noise: 0.0
+  theta: 0.20                  # Faster mean reversion
+  dt: 0.01
+
+network:
+  latent_dim: 128              # Larger latent dimension
+  encoder_hidden_size: [128, 128]  # Deeper actor network
+  head_hidden_size: [128, 64]      # Deeper critic network
+
+hpo_config:
+  # Wider search ranges for better optimization
+  lr_actor:
+    min: 0.0001
+    max: 0.005
+  lr_critic:
+    min: 0.0005
+    max: 0.01
+  batch_size:
+    min: 64
+    max: 512
+    dtype: int
+  learn_step:
+    min: 10
+    max: 150
+    dtype: int
+    grow_factor: 1.5
+    shrink_factor: 0.75
+
+mutation:
+  # More aggressive architecture search
+  no_mutation: 0.15
+  architecture: 0.25
+  new_layer: 0.25
+  parameter: 0.20
+  rl_hp: 0.15
+  mutation_sd: 0.15

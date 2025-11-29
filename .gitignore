@@ -167,6 +167,6 @@ Desktop.ini
 .volumes/
 
 # Experiment management
-progress/             # Live progress CSVs (transient)
-results/              # Individual experiment results (keep registry only)
-!results/experiments.csv  # Keep experiment registry
+progress/
+results/
+!results/experiments.csv

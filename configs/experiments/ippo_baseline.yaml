@@ -1,0 +1,59 @@
+# IPPO Baseline Configuration
+# IPPO is on-policy with stochastic policies (different from MATD3/MADDPG)
+
+name: "ippo_baseline"
+description: "IPPO baseline - on-policy with stochastic policies for better exploration"
+seed: 42
+
+training:
+  max_steps: 8000000          # Total training steps
+  num_envs: 8                 # Number of parallel environments
+  evo_steps: 10000            # Evolution frequency (every N steps)
+  checkpoint_interval: 100000  # Checkpoint frequency
+  learning_delay: 0           # Steps before starting learning
+  eval_steps: null            # Evaluation steps per episode (null = until done)
+  eval_loop: 1                # Number of evaluation episodes
+
+hyperparameters:
+  population_size: 4
+  algo: "IPPO"
+  batch_size: 128
+  lr: 0.0003                 # Single learning rate for IPPO
+  gamma: 0.99                # Discount factor
+  gae_lambda: 0.95           # GAE parameter for advantage estimation
+  clip_coef: 0.2             # PPO clipping coefficient
+  ent_coef: 0.01             # Entropy coefficient for exploration
+  vf_coef: 0.5               # Value function coefficient
+  max_grad_norm: 0.5         # Gradient clipping
+  update_epochs: 4           # Number of update epochs per batch
+  num_minibatches: 4         # Number of minibatches
+
+network:
+  latent_dim: 64
+  encoder_hidden_size: [64]  # Actor hidden layers
+  head_hidden_size: [64]     # Critic hidden layers
+
+hpo_config:
+  # Hyperparameter optimization bounds for evolutionary search
+  lr:
+    min: 0.0001
+    max: 0.001
+  batch_size:
+    min: 64
+    max: 512
+    dtype: int
+  clip_coef:
+    min: 0.1
+    max: 0.3
+  ent_coef:
+    min: 0.0
+    max: 0.1
+
+mutation:
+  # Evolutionary mutation probabilities
+  no_mutation: 0.2
+  architecture: 0.2
+  new_layer: 0.2
+  parameter: 0.2
+  rl_hp: 0.2
+  mutation_sd: 0.1

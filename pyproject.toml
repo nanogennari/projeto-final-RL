@@ -11,6 +11,8 @@ dependencies = [
     "imageio>=2.37.0",
     "matplotlib>=3.9.4",
     "mpe2>=0.0.1",
+    "pandas>=2.0.0",
     "pettingzoo[mpe]>=1.25.0",
     "pillow>=12.0.0",
+    "pyyaml>=6.0.0",
 ]
