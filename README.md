@@ -1,3 +1,5 @@
+# Projeto de Eduardo Vianna de Lima Fernandes Guimarães, Isaque Vieira Machado Pim e Juliano Genari de Araújo:
+
 # Ambiente Multi-Agente Speaker-Listener
 
 Este projeto implementa um ambiente de aprendizado por reforço multi-agente baseado no [ambiente Speaker-Listener](https://pettingzoo.farama.org/environments/mpe/simple_speaker_listener), onde dois agentes colaboram para resolver tarefas de comunicação e coordenação.   Os Agentes são treinados usando o Algoritmo MATD3.   
