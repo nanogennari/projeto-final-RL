@@ -1,4 +1,4 @@
-# Aprendizado por Reforço Multi-Agente com SMPE e Otimização Evolucionária
+# Projeto Final: Aprendizado por Reforço Multi-Agente com SMPE e Otimização Evolucionária
 
 **Autores:**
 
@@ -16,48 +16,94 @@ O ambiente de teste utilizado é o **Simple Speaker Listener** da biblioteca MPE
 
 ## Como Usar
 
-### Opção 1: Docker Compose (Recomendado)
+### Setup Inicial
 
-A forma mais fácil de executar o projeto é usando Docker Compose:
-
-**1. Build da imagem (apenas na primeira vez ou após mudar dependências):**
+**Build da imagem Docker (apenas na primeira vez ou após mudar dependências):**
 ```bash
 docker build -t projeto-final-rl:latest .
 ```
 
-**2. Executar o treinamento:**
+**Alternativa - Execução Local com uv:**
 ```bash
-# Usar configuração baseline (padrão)
+uv sync
+```
+
+### Executar Treinamento
+
+**Com Docker (recomendado):**
+```bash
+# Usar configuração baseline MATD3 (padrão)
 docker compose run --rm training
 
 # Usar configuração SMPE
 docker compose run --rm run_smpe
 
-# Ou especificar uma configuração customizada
+# Especificar uma configuração customizada
 docker compose run --rm training python main.py --config configs/experiments/improved.yaml
 ```
 
-**Visualizar resultados de diferentes experimentos:**
-
+**Executar múltiplos experimentos:**
 ```bash
-# Plotar a evolução de todos os experimentos completados
+# Rodar todos os experimentos automaticamente
+./run_all_experiments.sh
+
+# Rodar manualmente em sequência
+for config in baseline high_lr fast_learning; do
+  docker compose run --rm training python main.py --config configs/experiments/${config}.yaml
+done
+
+# Rodar em background
+nohup docker compose run --rm training python main.py --config configs/experiments/deep_network.yaml > deep_network.log 2>&1 &
+tail -f deep_network.log  # monitorar progresso
+```
+
+**Localmente:**
+```bash
+python main.py --config configs/experiments/baseline.yaml
+```
+
+### Visualizar Resultados
+
+**Replay de modelos treinados:**
+```bash
+# Visualizar o modelo mais recente
+docker compose run --rm replay
+
+# Especificar um experimento
+docker compose run --rm replay python replay.py --model exp_20251128_123149
+```
+
+**Análise e comparação de experimentos:**
+```bash
+# Plotar evolução de todos os experimentos
 python plot_experiments.py
 
 # Listar todos os experimentos
 python compare.py --list
 
-# Comparar dois experimentos específicos
+# Comparar experimentos específicos
 python compare.py exp_20251128_123149 exp_20251128_134031
 
-# Comparar múltiplos experimentos com plot customizado
+# Comparar múltiplos com plot customizado
 python compare.py exp_001 exp_002 exp_003 --output my_comparison.png
 ```
 
-### Configurações YAML dos experimentos
+### Resultados
 
-As configurações estão em `configs/experiments/`.
+Cada experimento é registrado em `results/experiments.csv` com métricas de desempenho (final_score, best_score, duration, etc).
 
-**Experimentos Disponíveis**:
+Resultados detalhados por experimento em `results/exp_YYYYMMDD_HHMMSS/`:
+- `exp_YYYYMMDD_HHMMSS_model.pt` - Modelo elite final
+- `metrics.json` - Hiperparâmetros e métricas completas
+- `scores_plot.png` - Gráfico de evolução
+- `scores_data.npy` - Dados brutos para análise
+- `exp_YYYYMMDD_HHMMSS_speaker_listener.gif` - Visualização do comportamento
+
+## Experimentos Disponíveis
+
+As configurações estão em `configs/experiments/`. Veja `configs/experiments/README.md` para detalhes completos.
+
+### Configurações Pré-definidas
 
 1. **baseline.yaml** - Configuração original de referência
 2. **improved.yaml** - Melhorias balanceadas (redes mais profundas, maior exploração)
@@ -69,9 +115,7 @@ As configurações estão em `configs/experiments/`.
 8. **fast_learning.yaml** - Atualizações muito frequentes
 9. **large_population.yaml** - População grande para diversidade evolutiva
 
-Veja `configs/experiments/README.md` para detalhes completos de cada configuração.
-
-**Exemplo de Configuração**:
+### Estrutura de Configuração
 
 ```yaml
 name: "baseline_matd3"
@@ -83,9 +127,6 @@ training:
   num_envs: 8
   evo_steps: 10000
   checkpoint_interval: 100000
-  learning_delay: 0
-  eval_steps: null
-  eval_loop: 1
 
 hyperparameters:
   population_size: 4
@@ -118,99 +159,17 @@ mutation:
   rl_hp: 0.2
 ```
 
-**Para criar uma nova configuração**:
+### Criar Nova Configuração
+
 ```bash
+# Copiar baseline como template
 cp configs/experiments/baseline.yaml configs/experiments/my_experiment.yaml
-```
 
-### Resultados e Registro de Experimentos
+# Editar configuração
+vim configs/experiments/my_experiment.yaml
 
-Cada experimento finalizado é registrado em `results/experiments.csv` com:
-
-- **exp_id**: ID único do experimento
-- **name**: Nome da configuração
-- **status**: running, completed, failed
-- **steps**: Total de steps treinados
-- **duration_hours**: Duração total do treinamento
-- **final_score**: Score médio final
-- **best_score**: Melhor score obtido
-- **worst_score**: Pior score obtido
-- **config_path**: Caminho para o arquivo de configuração YAML
-- **start_time**: Data/hora de início
-- **end_time**: Data/hora de conclusão
-
-Resultados detalhados por experimento em `results/exp_YYYYMMDD_HHMMSS/`:
-
-- `model.pt`: Modelo elite final treinado
-- `metrics.json`: Métricas completas do experimento
-- `scores_plot.png`: Gráfico da evolução das pontuações
-- `scores_data.npy`: Dados brutos das pontuações para análise
-
-## Workflows Comuns
-
-### Executar um Novo Experimento
-
-1. **Criar ou escolher uma configuração**:
-   ```bash
-   # baseline existente
-   config="configs/experiments/baseline.yaml"
-
-   # criar nova configuração
-   cp configs/experiments/baseline.yaml configs/experiments/my_experiment.yaml
-   ```
-
-2. **Iniciar o treinamento**:
-   ```bash
-   docker compose run --rm training python main.py --config $config
-   ```
-
-### Executar Múltiplos Experimentos
-
-**Rodar todos os experimentos automaticamente**:
-```bash
-./run_all_experiments.sh
-```
-
-**Ou rodar manualmente**:
-```bash
-for config in baseline high_lr fast_learning; do
-  echo "===== Iniciando experimento: $config ====="
-  docker compose run --rm training python main.py --config configs/experiments/${config}.yaml
-  echo "===== Experimento $config concluído ====="
-done
-nohup docker compose run --rm training python main.py --config configs/experiments/deep_network.yaml > deep_network.log 2>&1 &
-
-# Monitorar experimento em background
-tail -f deep_network.log
-```
-
-### Visualizar Modelo Treinado
-
-```bash
-# Visualizar o modelo mais recente
-docker compose run --rm replay
-
-# Ou especificar um experimento específico
-docker compose run --rm replay python replay.py --model results/exp_20251127_143052/model.pt
-```
-
-### Opção 2: Execução Local com uv
-
-Após copiar este diretório localmente, inicialize o ambiente virtual definido em pyproject.toml:
-
-```bash
-uv sync
-```
-
-Execute o script principal:
-```bash
-python main.py
-```
-
-Para gerar a visualização do modelo treinado:
-
-```bash
-python replay.py
+# Executar
+docker compose run --rm training python main.py --config configs/experiments/my_experiment.yaml
 ```
 
 # Nossa tentativa de inovação
@@ -273,9 +232,9 @@ Resumindo o **Algoritmo SMPE/SMPE²**: ([arXiv][2])
 3. **Cálculo de recompensa intrínseca**
 
    * Para cada agente, calcula hash de $(z_t^i)$ via SimHash, atualiza contagem e computa
-  
+
      $( r^{\text{int},i}_t = \frac{\beta}{\sqrt{N_i(\text{hash}(z_t^i))}}.)$
-     
+
    * Define a recompensa total usada no update de política como
      $(\tilde r_t^i = r_t + r^{\text{int},i}_t)$.
 
@@ -344,9 +303,46 @@ Isso significa que:
 * o algoritmo pode ser reusado em novos cenários (por exemplo, diferentes tarefas da MPE, LBF, RWARE ou outros ambientes PettingZoo) sem precisar redesenhar o tuning do zero;
 * ganha-se um pipeline mais próximo de uso real: um único experimento com população evolutiva encontra tanto a política SMPE quanto uma configuração razoável de hiperparâmetros.
 
+### Como Executar SMPE
+
+**Treinar com configuração padrão:**
+```bash
+docker compose run --rm run_smpe
+```
+
+**Visualizar modelo SMPE treinado:**
+```bash
+# Replay automático do experimento mais recente
+docker compose run --rm replay
+
+# Especificar experimento SMPE
+docker compose run --rm replay python replay.py --model exp_20251129_212113
+```
+
 ---
 
 ## Resultados
+
+### Tabela Comparativa de Experimentos
+
+| Experimento | Algoritmo | Steps | Duração (h) | Score Médio | Score Final | Melhor Score | Pior Score |
+|-------------|-----------|-------|-------------|-------------|-------------|--------------|------------|
+| baseline_matd3 | MATD3 | 8M | 1.14 | -90.76 | -65.60 | -53.47 | -153.22 |
+| improved_matd3 | MATD3 | 12M | 2.33 | -124.79 | -108.30 | -65.96 | -200.10 |
+| high_lr_matd3 | MATD3 | 8M | 1.17 | -115.88 | -64.05 | -62.85 | -220.75 |
+| large_batch_matd3 | MATD3 | 8M | 1.14 | -110.54 | -88.51 | -30.19 | -212.91 |
+| deep_network_matd3 | MATD3 | 8M | 1.43 | -119.65 | -64.12 | -59.95 | -234.89 |
+| aggressive_mutation_matd3 | MATD3 | 12M | 1.87 | -90.81 | -82.42 | -56.90 | -133.12 |
+| stable_learning_matd3 | MATD3 | 8M | 2.10 | -80.87 | -73.49 | -48.36 | -120.76 |
+| fast_learning_matd3 | MATD3 | 8M | 3.52 | -127.41 | -119.74 | -32.85 | -229.65 |
+| large_population_matd3 | MATD3 | 16M | 2.98 | -97.77 | -77.32 | -64.62 | -151.37 |
+| **smpe_baseline** | **SMPE** | **8M** | **1.19** | **-56.26** | **-41.44** | **-31.55** | **-95.79** |
+
+**Observações:**
+- Scores mais próximos de zero são melhores (menos penalização)
+- Score Médio calculado como média aritmética de (Melhor + Final + Pior) / 3
+- SMPE obteve o melhor score médio (-56.26), score final (-41.44) e melhor score (-31.55) comparado a todas as variações de MATD3
+- O tempo de treinamento do SMPE foi competitivo (1.19h para 8M steps)
 
 ### Evolução do Treinamento
 
