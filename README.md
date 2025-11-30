@@ -1,4 +1,18 @@
-# Projeto de Eduardo Vianna de Lima Fernandes Guimarães, Isaque Vieira Machado Pim e Juliano Genari de Araújo:
+# Aprendizado por Reforço Multi-Agente com SMPE e Otimização Evolucionária
+
+**Autores:**
+
+* Eduardo Vianna de Lima Fernandes Guimarães
+* Isaque Vieira Machado Pim
+* Juliano Genari de Araújo
+
+**Data:** 29/11/2024
+
+## Introdução
+
+Este projeto implementa e analisa algoritmos de **aprendizado por reforço multi-agente (MARL)** em ambientes cooperativos parcialmente observáveis, com foco especial no algoritmo **SMPE (State Modeling with Adversarial Exploration)** integrado ao framework **AgileRL** para otimização evolucionária de hiperparâmetros.
+
+O ambiente de teste utilizado é o **Simple Speaker Listener** da biblioteca MPE (Multi-Particle Environments), um benchmark clássico para avaliar comunicação e cooperação entre agentes em condições de observabilidade parcial. O projeto explora tanto algoritmos baseline (MATD3, MADDPG) quanto o estado-da-arte SMPE.
 
 ## Como Usar
 
@@ -342,12 +356,26 @@ A figura abaixo mostra a evolução do treinamento de todos os experimentos comp
 
 A linha verde tracejada representa o score alvo de -60.
 
+### Comportamento do Agente SMPE
+
+Exemplo de execução do modelo SMPE treinado no ambiente Simple Speaker Listener:
+
+![SMPE Agent Behavior](exp_20251129_212113_speaker_listener.gif)
+
+O agente demonstra comportamento cooperativo entre speaker e listener para resolver a tarefa de comunicação.
+
 ---
 
-[1]: https://github.com/ddaedalus/smpe "GitHub - ddaedalus/smpe: [ICML 2025] Official Code of SMPE: \"Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration\""
-[2]: https://arxiv.org/html/2505.05262v1 "Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration"
-[3]: https://github.com/AgileRL/AgileRL?utm_source=chatgpt.com "AgileRL/AgileRL"
-[4]: https://docs.agilerl.com/en/latest/api/modules/base.html?utm_source=chatgpt.com "EvolvableModule"
-[5]: https://docs.agilerl.com/en/latest/evo_hyperparam_opt/index.html?utm_source=chatgpt.com "Evolutionary Hyperparameter Optimization"
+## Referências
+
+\[1\]: https://github.com/ddaedalus/smpe "GitHub - ddaedalus/smpe: [ICML 2025] Official Code of SMPE: \"Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration\""
+
+\[2\]: https://arxiv.org/html/2505.05262v1 "Enhancing Cooperative Multi-Agent Reinforcement Learning with State Modelling and Adversarial Exploration"
+
+\[3\]: https://github.com/AgileRL/AgileRL?utm_source=chatgpt.com "AgileRL/AgileRL"
+
+\[4\]: https://docs.agilerl.com/en/latest/api/modules/base.html?utm_source=chatgpt.com "EvolvableModule"
+
+\[5\]: https://docs.agilerl.com/en/latest/evo_hyperparam_opt/index.html?utm_source=chatgpt.com "Evolutionary Hyperparameter Optimization"
 
 

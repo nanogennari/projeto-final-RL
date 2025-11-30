@@ -22,6 +22,7 @@ services:
     command: python replay.py
     volumes:
       - ./replay.py:/app/replay.py
+      - ./smpe.py:/app/smpe.py
       - ./src:/app/src
       - ./configs:/app/configs
       - ./progress:/app/progress
